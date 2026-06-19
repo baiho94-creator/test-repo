@@ -318,7 +318,11 @@
       </div>
       <div class="form-group">
         <label>교육 날짜</label>
-        <input type="text" id="edu-date" placeholder="2024-07-15" />
+        <div style="display:flex; gap:6px;">
+          <select id="edu-year" style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 10px; color:var(--text); font-size:14px; outline:none;"></select>
+          <select id="edu-month" style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 10px; color:var(--text); font-size:14px; outline:none;"></select>
+          <select id="edu-day" style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 10px; color:var(--text); font-size:14px; outline:none;"></select>
+        </div>
       </div>
     </div>
     <div class="form-actions">
@@ -401,8 +405,53 @@ let timerRunning = false;
 let currentQRInstance = null;
 let overlayQRInstance = null;
 
+function initDateDropdowns() {
+  const now = new Date();
+  const yearSel = document.getElementById('edu-year');
+  const monthSel = document.getElementById('edu-month');
+  const daySel = document.getElementById('edu-day');
+
+  for (let y = now.getFullYear() + 1; y >= now.getFullYear() - 3; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y + '년';
+    if (y === now.getFullYear()) o.selected = true;
+    yearSel.appendChild(o);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const o = document.createElement('option');
+    o.value = String(m).padStart(2,'0'); o.textContent = m + '월';
+    if (m === now.getMonth() + 1) o.selected = true;
+    monthSel.appendChild(o);
+  }
+
+  function updateDays() {
+    const y = parseInt(yearSel.value);
+    const m = parseInt(monthSel.value);
+    const prev = daySel.value;
+    daySel.innerHTML = '';
+    const maxDay = new Date(y, m, 0).getDate();
+    for (let d = 1; d <= maxDay; d++) {
+      const o = document.createElement('option');
+      o.value = String(d).padStart(2,'0'); o.textContent = d + '일';
+      if (d === parseInt(prev) || (d === now.getDate() && !prev)) o.selected = true;
+      daySel.appendChild(o);
+    }
+  }
+  yearSel.addEventListener('change', updateDays);
+  monthSel.addEventListener('change', updateDays);
+  updateDays();
+}
+
+function getSelectedDate() {
+  const y = document.getElementById('edu-year').value;
+  const m = document.getElementById('edu-month').value;
+  const d = document.getElementById('edu-day').value;
+  return `${y}-${m}-${d}`;
+}
+
 function init() {
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  initDateDropdowns();
   renderList();
 }
 
@@ -423,7 +472,7 @@ function addEducation() {
   const startUrl = document.getElementById('edu-start-url').value.trim();
   const endUrl = document.getElementById('edu-end-url').value.trim();
   const duration = parseInt(document.getElementById('edu-duration').value) || 60;
-  const date = document.getElementById('edu-date').value.trim();
+  const date = getSelectedDate();
 
   if (!name || !startUrl || !endUrl) {
     alert('교육명, 시작/종료 URL은 필수입니다.');
@@ -438,7 +487,7 @@ function addEducation() {
   document.getElementById('edu-start-url').value = '';
   document.getElementById('edu-end-url').value = '';
   document.getElementById('edu-duration').value = '';
-  document.getElementById('edu-date').value = '';
+  initDateDropdowns();
   document.getElementById('add-form').classList.remove('open');
 }
 
@@ -617,3 +666,4 @@ init();
 </script>
 </body>
 </html>
+
