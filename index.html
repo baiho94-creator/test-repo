@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교육 QR 관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --accent: #4f8ef7;
+    --accent2: #f75a4f;
+    --green: #3ecf8e;
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --border: #2c3050;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  header span { font-size: 12px; color: var(--muted); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  /* 교육 목록 */
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 12px;
+  }
+
+  .edu-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+
+  .edu-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .edu-item:hover { border-color: var(--accent); background: var(--surface2); }
+  .edu-item.active { border-color: var(--accent); }
+
+  .edu-item-left { display: flex; flex-direction: column; gap: 4px; }
+  .edu-item-name { font-size: 15px; font-weight: 500; }
+  .edu-item-date { font-size: 12px; color: var(--muted); }
+
+  .edu-item-actions { display: flex; gap: 8px; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-success { background: var(--green); color: #0f1117; }
+
+  /* 추가 폼 */
+  .add-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 32px;
+    display: none;
+  }
+  .add-form.open { display: block; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  input[type="text"], input[type="url"], input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus { border-color: var(--accent); }
+
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* QR 패널 */
+  .qr-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: none;
+  }
+  .qr-panel.open { display: block; }
+
+  .qr-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .qr-panel-title { font-size: 17px; font-weight: 600; }
+
+  .qr-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .qr-tab {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .qr-tab.active-start { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .qr-tab.active-end { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+  .qr-content { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+
+  .qr-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 200px;
+  }
+
+  .qr-info { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 16px; }
+
+  .url-display {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+
+  /* 타이머 */
+  .timer-section { margin-top: 16px; }
+  .timer-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .timer-display {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .timer-display.running { color: var(--green); }
+  .timer-display.warning { color: #f7b74f; }
+  .timer-display.ended { color: var(--accent2); }
+
+  .timer-controls { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .timer-input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .timer-input-row input { width: 70px; }
+
+  /* 전체화면 */
+  .fullscreen-btn {
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 전체화면 오버레이 */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 1000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+  }
+  .overlay.open { display: flex; }
+
+  .overlay-title { font-size: 28px; font-weight: 700; color: #fff; }
+  .overlay-type {
+    font-size: 16px;
+    padding: 6px 20px;
+    border-radius: 100px;
+  }
+  .overlay-type.start { background: var(--accent); color: #fff; }
+  .overlay-type.end { background: var(--accent2); color: #fff; }
+
+  .overlay-qr {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .overlay-timer {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .overlay-timer.running { color: var(--green); }
+  .overlay-timer.warning { color: #f7b74f; }
+  .overlay-timer.ended { color: var(--accent2); }
+
+  .overlay-url { font-size: 14px; color: #666; margin-top: 8px; }
+
+  .overlay-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .qr-content { flex-direction: column; }
+    .timer-display { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 교육 QR 관리</h1>
+  <span id="today-date"></span>
+</header>
+
+<div class="container">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <div class="section-title">교육 목록</div>
+    <button class="btn btn-primary" onclick="toggleAddForm()">+ 교육 추가</button>
+  </div>
+
+  <!-- 추가 폼 -->
+  <div class="add-form" id="add-form">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>교육명</label>
+        <input type="text" id="edu-name" placeholder="예: 2024년 7월 안전교육" />
+      </div>
+      <div class="form-group">
+        <label>시작 출석 URL</label>
+        <input type="url" id="edu-start-url" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label>종료 출석 URL</label>
+        <input type="url" id="edu-end-url" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label>교육 시간 (분)</label>
+        <input type="number" id="edu-duration" placeholder="60" min="1" />
+      </div>
+      <div class="form-group">
+        <label>교육 날짜</label>
+        <input type="text" id="edu-date" placeholder="2024-07-15" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="toggleAddForm()">취소</button>
+      <button class="btn btn-success" onclick="addEducation()">저장</button>
+    </div>
+  </div>
+
+  <!-- 교육 목록 -->
+  <div class="edu-list" id="edu-list">
+    <div class="empty-state">교육을 추가해주세요</div>
+  </div>
+
+  <!-- QR 패널 -->
+  <div class="qr-panel" id="qr-panel">
+    <div class="qr-panel-header">
+      <div class="qr-panel-title" id="qr-panel-title"></div>
+      <button class="btn btn-ghost" onclick="closePanel()">닫기</button>
+    </div>
+
+    <div class="qr-tabs">
+      <button class="qr-tab active-start" id="tab-start" onclick="switchTab('start')">🟢 시작 출석</button>
+      <button class="qr-tab" id="tab-end" onclick="switchTab('end')">🔴 종료 출석</button>
+    </div>
+
+    <div class="qr-content">
+      <div>
+        <div class="qr-box" id="qr-display"></div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="fullscreen-btn" onclick="openFullscreen()">⛶ 전체화면</button>
+        </div>
+      </div>
+
+      <div class="qr-info">
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">URL</div>
+          <div class="url-display" id="url-display"></div>
+        </div>
+
+        <div class="timer-section">
+          <div class="timer-label">타이머</div>
+          <div class="timer-input-row">
+            <input type="number" id="timer-minutes" placeholder="60" min="1" style="width:80px;" />
+            <span style="color:var(--muted); font-size:13px;">분</span>
+            <button class="btn btn-ghost" onclick="setTimer()" style="padding:8px 12px; font-size:12px;">설정</button>
+          </div>
+          <div class="timer-display" id="timer-display">00:00</div>
+          <div class="timer-controls">
+            <button class="btn btn-success" onclick="startTimer()" id="btn-start-timer">▶ 시작</button>
+            <button class="btn btn-ghost" onclick="pauseTimer()">⏸ 일시정지</button>
+            <button class="btn btn-ghost" onclick="resetTimer()">↺ 초기화</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 전체화면 오버레이 -->
+<div class="overlay" id="overlay">
+  <button class="overlay-close" onclick="closeFullscreen()">✕</button>
+  <div style="text-align:center;">
+    <div class="overlay-type" id="overlay-type-badge">시작 출석</div>
+    <div style="height:12px;"></div>
+    <div class="overlay-title" id="overlay-edu-name"></div>
+  </div>
+  <div class="overlay-qr" id="overlay-qr"></div>
+  <div class="overlay-timer" id="overlay-timer">00:00</div>
+  <div class="overlay-url" id="overlay-url"></div>
+</div>
+
+<script>
+let educations = JSON.parse(localStorage.getItem('educations') || '[]');
+let currentEdu = null;
+let currentTab = 'start';
+let timerInterval = null;
+let timerSeconds = 0;
+let timerTotal = 0;
+let timerRunning = false;
+let currentQRInstance = null;
+let overlayQRInstance = null;
+
+function init() {
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  renderList();
+}
+
+function save() {
+  localStorage.setItem('educations', JSON.stringify(educations));
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-form');
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) {
+    document.getElementById('edu-date').value = new Date().toISOString().split('T')[0];
+  }
+}
+
+function addEducation() {
+  const name = document.getElementById('edu-name').value.trim();
+  const startUrl = document.getElementById('edu-start-url').value.trim();
+  const endUrl = document.getElementById('edu-end-url').value.trim();
+  const duration = parseInt(document.getElementById('edu-duration').value) || 60;
+  const date = document.getElementById('edu-date').value.trim();
+
+  if (!name || !startUrl || !endUrl) {
+    alert('교육명, 시작/종료 URL은 필수입니다.');
+    return;
+  }
+
+  educations.unshift({ id: Date.now(), name, startUrl, endUrl, duration, date });
+  save();
+  renderList();
+
+  document.getElementById('edu-name').value = '';
+  document.getElementById('edu-start-url').value = '';
+  document.getElementById('edu-end-url').value = '';
+  document.getElementById('edu-duration').value = '';
+  document.getElementById('edu-date').value = '';
+  document.getElementById('add-form').classList.remove('open');
+}
+
+function renderList() {
+  const list = document.getElementById('edu-list');
+  if (educations.length === 0) {
+    list.innerHTML = '<div class="empty-state">교육을 추가해주세요</div>';
+    return;
+  }
+  list.innerHTML = educations.map(e => `
+    <div class="edu-item ${currentEdu && currentEdu.id === e.id ? 'active' : ''}" onclick="selectEdu(${e.id})">
+      <div class="edu-item-left">
+        <div class="edu-item-name">${e.name}</div>
+        <div class="edu-item-date">${e.date || ''} · ${e.duration}분</div>
+      </div>
+      <div class="edu-item-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost" onclick="selectEdu(${e.id})">QR 보기</button>
+        <button class="btn btn-danger" onclick="deleteEdu(${e.id})">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteEdu(id) {
+  if (!confirm('삭제할까요?')) return;
+  educations = educations.filter(e => e.id !== id);
+  if (currentEdu && currentEdu.id === id) {
+    currentEdu = null;
+    document.getElementById('qr-panel').classList.remove('open');
+  }
+  save();
+  renderList();
+}
+
+function selectEdu(id) {
+  currentEdu = educations.find(e => e.id === id);
+  document.getElementById('qr-panel-title').textContent = currentEdu.name;
+  document.getElementById('timer-minutes').value = currentEdu.duration;
+  document.getElementById('qr-panel').classList.add('open');
+  resetTimer();
+  timerTotal = currentEdu.duration * 60;
+  timerSeconds = timerTotal;
+  updateTimerDisplay();
+  switchTab('start');
+  renderList();
+  document.getElementById('qr-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-start').className = 'qr-tab' + (tab === 'start' ? ' active-start' : '');
+  document.getElementById('tab-end').className = 'qr-tab' + (tab === 'end' ? ' active-end' : '');
+  generateQR();
+}
+
+function generateQR() {
+  if (!currentEdu) return;
+  const url = currentTab === 'start' ? currentEdu.startUrl : currentEdu.endUrl;
+  document.getElementById('url-display').textContent = url;
+
+  const container = document.getElementById('qr-display');
+  container.innerHTML = '';
+  currentQRInstance = new QRCode(container, {
+    text: url,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+
+function openFullscreen() {
+  if (!currentEdu) return;
+  const url = currentTab === 'start' ? currentEdu.startUrl : currentEdu.endUrl;
+  const isStart = currentTab === 'start';
+
+  const badge = document.getElementById('overlay-type-badge');
+  badge.textContent = isStart ? '🟢 시작 출석' : '🔴 종료 출석';
+  badge.className = 'overlay-type ' + (isStart ? 'start' : 'end');
+
+  document.getElementById('overlay-edu-name').textContent = currentEdu.name;
+  document.getElementById('overlay-url').textContent = url;
+
+  const oqr = document.getElementById('overlay-qr');
+  oqr.innerHTML = '';
+  overlayQRInstance = new QRCode(oqr, {
+    text: url,
+    width: 280,
+    height: 280,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  updateOverlayTimer();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeFullscreen() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// 타이머
+function setTimer() {
+  const m = parseInt(document.getElementById('timer-minutes').value) || 60;
+  timerTotal = m * 60;
+  timerSeconds = timerTotal;
+  timerRunning = false;
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    if (timerSeconds > 0) {
+      timerSeconds--;
+      updateTimerDisplay();
+      updateOverlayTimer();
+    } else {
+      clearInterval(timerInterval);
+      timerRunning = false;
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = timerTotal;
+  updateTimerDisplay();
+  updateOverlayTimer();
+}
+
+function formatTime(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function getTimerClass(s) {
+  if (s === 0) return 'ended';
+  if (timerTotal > 0 && s <= timerTotal * 0.1) return 'warning';
+  if (timerRunning) return 'running';
+  return '';
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timer-display');
+  el.textContent = formatTime(timerSeconds);
+  el.className = 'timer-display ' + getTimerClass(timerSeconds);
+}
+
+function updateOverlayTimer() {
+  const el = document.getElementById('overlay-timer');
+  if (el) {
+    el.textContent = formatTime(timerSeconds);
+    el.className = 'overlay-timer ' + getTimerClass(timerSeconds);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeFullscreen();
+});
+
+init();
+</script>
+</body>
+</html>
